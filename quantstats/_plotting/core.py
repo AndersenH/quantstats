@@ -33,12 +33,7 @@ from matplotlib.ticker import (
 import pandas as _pd
 import numpy as _np
 import seaborn as _sns
-from .. import (
-    stats as _stats, utils as _utils,
-)
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-
+from .. import stats as _stats
 
 _sns.set(font_scale=1.1, rc={
     'figure.figsize': (10, 6),
@@ -69,12 +64,12 @@ def _get_colors(grayscale):
 
 
 def plot_returns_bars(returns, benchmark=None,
-                      returns_label="Strategy",
-                      hline=None, hlw=None, hlcolor="red", hllabel="",
-                      resample="A", title="Returns", match_volatility=False,
-                      log_scale=False, figsize=(10, 6),
-                      grayscale=False, fontname='Arial', ylabel=True,
-                      subtitle=True, savefig=None, show=True):
+                    returns_label='af', benchmark_name = 'bmark',
+                    hline=None, hlw=None, hlcolor="red", hllabel="",
+                    resample="A", title="Returns", match_volatility=False,
+                    log_scale=False, figsize=(10, 6),
+                    grayscale=False, fontname='Arial', ylabel=True,
+                    subtitle=True, savefig=None, show=True):
 
     if match_volatility and benchmark is None:
         raise ValueError('match_volatility requires passing of '
@@ -87,8 +82,8 @@ def plot_returns_bars(returns, benchmark=None,
     colors, _, _ = _get_colors(grayscale)
     df = _pd.DataFrame(index=returns.index, data={returns_label: returns})
     if isinstance(benchmark, _pd.Series):
-        df['Benchmark'] = benchmark[benchmark.index.isin(returns.index)]
-        df = df[['Benchmark', returns_label]]
+        df[benchmark_name] = benchmark[benchmark.index.isin(returns.index)]
+        df = df[[benchmark_name, returns_label]]
 
     df = df.dropna()
     if resample is not None:
@@ -119,15 +114,9 @@ def plot_returns_bars(returns, benchmark=None,
     fig.set_facecolor('white')
     ax.set_facecolor('white')
 
-    try:
-        ax.set_xticklabels(df.index.year)
-        years = sorted(list(set(df.index.year)))
-    except AttributeError:
-        ax.set_xticklabels(df.index)
-        years = sorted(list(set(df.index)))
-
+    ax.set_xticklabels(df.index.year)
     # ax.fmt_xdata = _mdates.DateFormatter('%Y-%m-%d')
-    # years = sorted(list(set(df.index.year)))
+    years = sorted(list(set(df.index.year)))
     if len(years) > 10:
         mod = int(len(years)/10)
         _plt.xticks(_np.arange(len(years)), [
@@ -186,7 +175,7 @@ def plot_returns_bars(returns, benchmark=None,
 
 def plot_timeseries(returns, benchmark=None,
                     title="Returns", compound=False, cumulative=True,
-                    fill=False, returns_label="Strategy",
+                    fill=False, returns_label='af', benchmark_name = 'bmark',
                     hline=None, hlw=None, hlcolor="red", hllabel="",
                     percent=True, match_volatility=False, log_scale=False,
                     resample=None, lw=1.5, figsize=(10, 6), ylabel="",
@@ -245,7 +234,7 @@ def plot_timeseries(returns, benchmark=None,
     ax.set_facecolor('white')
 
     if isinstance(benchmark, _pd.Series):
-        ax.plot(benchmark, lw=lw, ls=ls, label="Benchmark", color=colors[0])
+        ax.plot(benchmark, lw=lw, ls=ls, label=benchmark_name, color=colors[0])
 
     alpha = .25 if grayscale else 1
     ax.plot(returns, lw=lw, label=returns_label, color=colors[1], alpha=alpha)
@@ -323,18 +312,9 @@ def plot_histogram(returns, resample="M", bins=20,
     if grayscale:
         colors = ['silver', 'gray', 'black']
 
-    if resample in ["M", "A"]:
-        groupper = returns.index.year
-        if resample == "M":
-            groupper = [returns.index.year, returns.index.month]
-        if compounded:
-            returns = _utils.group_returns(returns, groupper, True)
-        else:
-            returns = _utils.group_returns(returns, groupper, False)
-    else:
-        apply_fnc = _stats.comp if compounded else _np.sum
-        returns = returns.fillna(0).resample(resample).apply(
-            apply_fnc).resample(resample).last()
+    apply_fnc = _stats.comp if compounded else _np.sum
+    returns = returns.fillna(0).resample(resample).apply(
+        apply_fnc).resample(resample).last()
 
     fig, ax = _plt.subplots(figsize=figsize)
     ax.spines['top'].set_visible(False)
